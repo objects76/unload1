@@ -1,70 +1,73 @@
-# Getting Started with Create React App
+# Actions when page unload(refresh or close window)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+- User prompt for custom action.
+- notistack used for prompt UI.
 
-## Available Scripts
+![Refresh dialog](reload.png)
 
-In the project directory, you can run:
+```js
+// index.js
+ReactDOM.render(
+  <React.StrictMode>
+    <SnackbarProvider preventDuplicate maxSnack={3}>
+      <App />
+    </SnackbarProvider>
+  </React.StrictMode>,
+  document.getElementById("root")
+);
 
-### `yarn start`
+// App.js
+// https://github.com/jacobbuck/react-beforeunload/blob/master/src/useBeforeunload.js
+const [message, setmessage] = useState("");
+const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+let handled;
+useEffect(() => {
+  const handleBeforeunload = (event) => {
+    if (handled) return;
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+    const saveTask = async (key) => {
+      function async_sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+      await async_sleep(500);
+      handled = true;
+      closeSnackbar(key);
+      window.close();
+    };
 
-### `yarn test`
+    // save toast:
+    // https://iamhosseindhv.com/notistack/demos#customizing-snackbars-individually
+    const action = (key) => (
+      <>
+        <br />
+        <Button onClick={() => saveTask(key)}>Save</Button>
+        <Button onClick={() => closeSnackbar(key)}>Cancel</Button>
+      </>
+    );
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+    const warn_msg = "You have to save recording before exit!";
+    enqueueSnackbar(warn_msg, {
+      variant: "info",
+      anchorOrigin: {
+        vertical: "bottom",
+        horizontal: "right",
+      },
+      persist: true,
+      action: action,
+    });
 
-### `yarn build`
+    // show warn popup.
+    // Chrome requires `returnValue` to be set.
+    // Some browsers like chrome display a fixed message.
+    event.returnValue = warn_msg;
+    return event.returnValue;
+  };
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+  window.addEventListener("beforeunload", handleBeforeunload);
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `yarn eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `yarn build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+  return () => {
+    window.removeEventListener("beforeunload", handleBeforeunload);
+  };
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
+```
